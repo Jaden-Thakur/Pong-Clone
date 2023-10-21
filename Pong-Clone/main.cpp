@@ -104,12 +104,14 @@
 
 // Player Variables
     float g_player_speed = 100.0f;
+    int g_player_score = 0;
 
 // Ball Variables
-    float g_ball_speed = 100.0f;
+    float g_ball_speed = 1.0f;
 
 // Computer Variables
-    float g_computer_speed = 100.0f;
+    float g_computer_speed = 1.0f;
+    int g_computer_score = 0;
 
               
 
@@ -205,8 +207,13 @@ void initialize() {
     g_paddle2_matrix = glm::translate(g_paddle2_matrix, g_computer_position);
     g_ball_matrix = glm::translate(g_ball_matrix, g_ball_position);
 
+
     // sets ball size
     g_ball_matrix = glm::scale(g_ball_matrix, g_ball_scale);
+
+    // sets ball initial direction
+    g_ball_movement.x = -1.0f;
+    g_ball_movement.y = 1.0f;
         
     // set the shader program
     glUseProgram(g_program.get_program_id()); 
@@ -419,31 +426,46 @@ void update() {
         g_player_position.y = 2.7f;
     }
 
+    
     // computer movement logic
-    g_computer_position.y = g_ball_position.y;
+    if ((g_ball_position.y > g_computer_position.y) && g_computer_position.y <= 2.7f) {
+        g_computer_movement.y = g_ball_movement.y;
+        g_computer_position.y += g_computer_movement.y * g_computer_speed * delta_time;
+    }
+    if ((g_ball_position.y < g_computer_position.y) && g_computer_position.y >= -2.7f) {
+        g_computer_movement.y = g_ball_movement.y;
+        g_computer_position.y += g_computer_movement.y * g_computer_speed * delta_time;
+    }
+    if (g_computer_position.y < -2.7f){
+        g_computer_position.y = -2.7f;
+        g_computer_movement.y = 0.0f;
+    }
+    if (g_computer_position.y > 2.7f) {
+        g_computer_position.y = 2.7f;
+        g_computer_movement.y = 0.0f;
+    }
+    
 
     // ball logic
-    g_ball_movement.x = -1.0f;
-    g_ball_movement.y = 1.0f;
+    g_ball_position += g_ball_movement * g_ball_speed * (delta_time);
 
-    if (g_ball_position.y >= -2.7f && g_ball_position.y <= 2.7f && g_ball_position.x >= -2.7f && g_ball_position.x <= 2.7f) {
-        g_ball_position += g_ball_movement * g_ball_speed * (delta_time);
+    if (g_ball_position.y < -3.3f) {
+        g_ball_movement.y = -g_ball_movement.y; 
     }
-    else if (g_ball_position.y <= -2.7f) {
-        g_ball_movement.y = -g_ball_movement.y;
-        
+    if (g_ball_position.y > 3.3f) {
+        g_ball_movement.y = -g_ball_movement.y;   
     }
-    else if (g_player_position.y >= 2.7f) {
-        g_ball_movement.y = -g_ball_movement.y;
-        
-    }
-    else if (g_ball_position.x <= -2.7f) {
+    if (g_ball_position.x < -4.5f) {
+        g_computer_score++;
+        LOG("Player: " << g_player_score << " Comp: " << g_computer_score);
         g_ball_movement.x = -g_ball_movement.x;
-        
+        g_ball_position.x = 0;
     }
-    else if (g_player_position.x >= 2.7f) {
+    if (g_ball_position.x > 4.5f) {
+        g_player_score++;
+        LOG("Player: " << g_player_score << " Comp: " << g_computer_score);
         g_ball_movement.x = -g_ball_movement.x;
-        
+        g_ball_position.x = 0;
     }
    
     g_paddle1_matrix = glm::mat4(1.0f);
@@ -453,7 +475,6 @@ void update() {
     g_paddle1_matrix = glm::translate(g_paddle1_matrix, g_player_position);
     g_paddle2_matrix = glm::translate(g_paddle2_matrix, g_computer_position);
     g_ball_matrix = glm::translate(g_ball_matrix, g_ball_position);
-    LOG("Player Y is:" << g_player_position.y << "Ball X: " << g_ball_position.x << " Ball Y: " << g_ball_position.y)
 }
 
 void shutdown() {
