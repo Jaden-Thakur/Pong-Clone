@@ -1,4 +1,4 @@
-/**
+﻿/**
 * Author: Jaden Thakur
 * Assignment: Pong Clone
 * Date due: 2023-10-21, 11:59pm
@@ -84,9 +84,9 @@
            paddle2_texture_id;
 
 
-    int NUMBER_OF_TEXTURES = 1;
-    const GLint LEVEL_OF_DETAIL = 0;
-    const GLint TEXTURE_BORDER = 0;
+    const GLint NUMBER_OF_TEXTURES = 1,
+                LEVEL_OF_DETAIL = 0,
+                TEXTURE_BORDER  = 0;
 
 
 // Paddle and Ball Matrices
@@ -94,24 +94,44 @@
               g_paddle2_matrix,
               g_ball_matrix;
 // Paddle and Ball Vectors
-    glm::vec3 g_player_position      = glm::vec3(-4.0f, 0.0f, 0.0f),
-              g_computer_position    = glm::vec3(4.0f, 0.0f, 0.0f),
-              g_ball_position        = glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::vec3 g_player_position     = glm::vec3(-4.0f, 0.0f, 0.0f),
+              g_computer_position   = glm::vec3(4.0f, 0.0f, 0.0f),
+              g_ball_position       = glm::vec3(0.0f, 0.0f, 0.0f),
               g_player_movement     = glm::vec3(0.0f, 0.0f, 0.0f),
               g_computer_movement   = glm::vec3(0.0f, 0.0f, 0.0f),
               g_ball_movement       = glm::vec3(0.0f, 0.0f, 0.0f),
+              g_player_scale        = glm::vec3(1.0f, 2.0f, 1.0f),
+              g_computer_scale      = glm::vec3(1.0f, 2.0f, 1.0f),
               g_ball_scale          = glm::vec3(0.4f, 0.4f, 1.0f);
+              
+
+
+// Gamer State Variables
+    bool g_won;
+    bool g_game_over = false;
 
 // Player Variables
-    float g_player_speed = 100.0f;
     int g_player_score = 0;
+    float g_player_speed = 100.0f,
+          g_player_height = g_player_scale.y,
+          g_player_width = g_player_scale.x,
+          g_player_max_y,
+          g_player_max_x;
 
 // Ball Variables
-    float g_ball_speed = 1.0f;
+    float g_ball_speed = 1.0f,
+          g_ball_height = g_ball_scale.y,
+          g_ball_width = g_ball_scale.x,
+          g_ball_max_y,
+          g_ball_max_x;
 
 // Computer Variables
-    float g_computer_speed = 1.0f;
     int g_computer_score = 0;
+    float g_computer_speed = 1.0f,
+          g_computer_height = g_computer_scale.y,
+          g_computer_width = g_computer_scale.x,
+          g_computer_max_y,
+          g_computer_max_x; 
 
               
 
@@ -177,9 +197,12 @@ void initialize() {
     // load texture shaders
     g_program.load(V_SHADER_PATH, F_SHADER_PATH);
 
+    float rel_width = 5.0f,
+          rel_height  = 3.75f;
+
     // initialize values of view matrix and projection matrix as well as model matrix
     g_view_matrix = glm::mat4(1.0f);
-    g_projection_matrix = glm::ortho(-5.0f, 5.0f, -3.75f, 3.75f, -1.0f, 1.0f);
+    g_projection_matrix = glm::ortho(-rel_width, rel_width, -rel_height, rel_height, -1.0f, 1.0f);
     
     // set view and projection matrices
     g_program.set_view_matrix(g_view_matrix);
@@ -210,6 +233,13 @@ void initialize() {
 
     // sets ball size
     g_ball_matrix = glm::scale(g_ball_matrix, g_ball_scale);
+    g_paddle1_matrix = glm::scale(g_paddle1_matrix, g_player_scale);
+    g_paddle2_matrix = glm::scale(g_paddle2_matrix, g_computer_scale);
+
+    g_ball_max_y = rel_height - (g_ball_height / 2);
+    g_ball_max_x = rel_width - (g_ball_width / 2);
+    g_player_max_y = rel_height - (g_player_height / 2);
+    g_player_max_x = rel_width - (g_player_width / 2);
 
     // sets ball initial direction
     g_ball_movement.x = -1.0f;
@@ -219,7 +249,6 @@ void initialize() {
     glUseProgram(g_program.get_program_id()); 
     // set background
     glClearColor(BG_RED, BG_GREEN, BG_BLUE, BG_ALPHA);
-
     
 
 }
@@ -300,7 +329,7 @@ void DrawText(ShaderProgram* program, GLuint font_texture_id, std::string text, 
     float width = 1.0f / FONTBANK_SIZE;
     float height = 1.0f / FONTBANK_SIZE;
 
-    // Instead of having a single pair of arrays, we'll have a series of pairs�one for each character
+    // Instead of having a single pair of arrays, we'll have a series of pairs—one for each character
     // Don't forget to include <vector>!
     std::vector<float> vertices;
     std::vector<float> texture_coordinates;
@@ -361,10 +390,6 @@ void render() {
     
     // Vertices (these always stay the same unless u want to enlarge the rectanlge but the coors should not move from the origin)
     float vertices[] = {
-        -0.5f, -1.0f, 0.5f, -1.0f, 0.5f, 1.0f,  // triangle 1
-        -0.5f, -1.0f, 0.5f, 1.0f, -0.5f, 1.0f   // triangle 2
-    };
-    float vertices2[] = {
         -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f,  // triangle 1
         -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f   // triangle 2
     };
@@ -389,10 +414,6 @@ void render() {
     g_program.set_model_matrix(g_paddle2_matrix);
     glBindTexture(GL_TEXTURE_2D, paddle2_texture_id);
     glDrawArrays(GL_TRIANGLES, 0, 6);
-
-    glVertexAttribPointer(g_program.get_position_attribute(), 2, GL_FLOAT, false, 0, vertices2);
-    glEnableVertexAttribArray(g_program.get_position_attribute());
-
     g_program.set_model_matrix(g_ball_matrix);
     glBindTexture(GL_TEXTURE_2D, ball_texture_id);
     glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -416,32 +437,32 @@ void update() {
     g_previous_ticks = ticks;
     
     // player movement logic
-    if (g_player_position.y >= -2.7f && g_player_position.y <= 2.7f) {
+    if (g_player_position.y >= -g_player_max_y && g_player_position.y <= g_player_max_y) {
         g_player_position += g_player_movement * g_player_speed * (delta_time);
     }
-    else if (g_player_position.y <= -2.7f) {
-        g_player_position.y = -2.7f;
+    else if (g_player_position.y <= -g_player_max_y) {
+        g_player_position.y = -g_player_max_y;
     }
-    else if (g_player_position.y >= 2.7f) {
-        g_player_position.y = 2.7f;
+    else if (g_player_position.y >= g_player_max_y) {
+        g_player_position.y = g_player_max_y;
     }
 
     
     // computer movement logic
-    if ((g_ball_position.y > g_computer_position.y) && g_computer_position.y <= 2.7f) {
+    if ((g_ball_position.y > g_computer_position.y) && g_computer_position.y <= g_computer_max_y) {
         g_computer_movement.y = g_ball_movement.y;
         g_computer_position.y += g_computer_movement.y * g_computer_speed * delta_time;
     }
-    if ((g_ball_position.y < g_computer_position.y) && g_computer_position.y >= -2.7f) {
+    if ((g_ball_position.y < g_computer_position.y) && g_computer_position.y >= -g_computer_max_y) {
         g_computer_movement.y = g_ball_movement.y;
         g_computer_position.y += g_computer_movement.y * g_computer_speed * delta_time;
     }
-    if (g_computer_position.y < -2.7f){
-        g_computer_position.y = -2.7f;
+    if (g_computer_position.y < -g_computer_max_y){
+        g_computer_position.y = -g_computer_max_y;
         g_computer_movement.y = 0.0f;
     }
-    if (g_computer_position.y > 2.7f) {
-        g_computer_position.y = 2.7f;
+    if (g_computer_position.y > g_computer_max_y) {
+        g_computer_position.y = g_computer_max_y;
         g_computer_movement.y = 0.0f;
     }
     
@@ -449,19 +470,19 @@ void update() {
     // ball logic
     g_ball_position += g_ball_movement * g_ball_speed * (delta_time);
 
-    if (g_ball_position.y < -3.3f) {
+    if (g_ball_position.y < -g_ball_max_y) {
         g_ball_movement.y = -g_ball_movement.y; 
     }
-    if (g_ball_position.y > 3.3f) {
+    if (g_ball_position.y > g_ball_max_y) {
         g_ball_movement.y = -g_ball_movement.y;   
     }
-    if (g_ball_position.x < -4.5f) {
+    if (g_ball_position.x < -g_ball_max_x) {
         g_computer_score++;
         LOG("Player: " << g_player_score << " Comp: " << g_computer_score);
         g_ball_movement.x = -g_ball_movement.x;
         g_ball_position.x = 0;
     }
-    if (g_ball_position.x > 4.5f) {
+    if (g_ball_position.x > g_ball_max_x) {
         g_player_score++;
         LOG("Player: " << g_player_score << " Comp: " << g_computer_score);
         g_ball_movement.x = -g_ball_movement.x;
@@ -475,6 +496,14 @@ void update() {
     g_paddle1_matrix = glm::translate(g_paddle1_matrix, g_player_position);
     g_paddle2_matrix = glm::translate(g_paddle2_matrix, g_computer_position);
     g_ball_matrix = glm::translate(g_ball_matrix, g_ball_position);
+
+    g_ball_matrix = glm::scale(g_ball_matrix, g_ball_scale);
+    g_paddle1_matrix = glm::scale(g_paddle1_matrix, g_player_scale);
+    g_paddle2_matrix = glm::scale(g_paddle2_matrix, g_computer_scale);
+
+    if (g_game_over) {
+
+    }
 }
 
 void shutdown() {
