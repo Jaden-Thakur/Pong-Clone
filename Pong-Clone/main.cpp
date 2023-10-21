@@ -74,6 +74,8 @@
 // Textures
     const char V_SHADER_PATH[] = "shaders/vertex_textured.glsl";
     const char F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
+    const char V_SHADER_PATH2[] = "shaders/vertex.glsl";
+    const char F_SHADER_PATH2[] = "shaders/fragment.glsl";
 
     const char ball_texture[] = "assets/pumpkin.png",
                paddle1_texture[] = "assets/skeleton-LEFT.png",
@@ -109,6 +111,7 @@
 // Gamer State Variables
     bool g_won;
     bool g_game_over = false;
+    bool two_players = false;
 
 // Player Variables
     int g_player_score = 0;
@@ -260,39 +263,87 @@ void process_input() {
 
     // stop player movement with no input
     g_player_movement = glm::vec3(0.0f);
+    if (two_players) {
+        g_computer_movement = glm::vec3(0.0f);
+    }
 
     // create click event
     SDL_Event event;
     
     // create loop to detect events
     while (SDL_PollEvent(&event)) {
-        switch (event.type) {
-            // quit
-        case SDL_QUIT:
-        case SDL_WINDOWEVENT_CLOSE:
-            g_game_is_running = false;
-            break;
-
-        case SDL_KEYDOWN:
-            switch (event.key.keysym.sym) {
-            case SDLK_w:
-                g_player_movement.y = 1.0f;
-                break;
-
-            case SDLK_s:
-                g_player_movement.y = -1.0f;
-                break;
-
-            case SDLK_ESCAPE:
+        if (two_players) {
+            switch (event.type) {
+                // quit
+            case SDL_QUIT:
+            case SDL_WINDOWEVENT_CLOSE:
                 g_game_is_running = false;
                 break;
 
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.sym) {
+                case SDLK_t:
+                    two_players = !two_players;
+                case SDLK_w:
+                    g_player_movement.y = 1.0f;
+                    break;
+
+                case SDLK_s:
+                    g_player_movement.y = -1.0f;
+                    break;
+
+                case SDLK_ESCAPE:
+                    g_game_is_running = false;
+                    break;
+                    // second player
+                case SDLK_UP:
+                    g_computer_movement.y = 1.0f;
+                    break;
+
+                case SDLK_DOWN:
+                    g_computer_movement.y = -1.0f;
+                    break;
+
+                default:
+                    break;
+                }
             default:
                 break;
             }
-        default:
-            break;
         }
+        else {
+            switch (event.type) {
+                // quit
+            case SDL_QUIT:
+            case SDL_WINDOWEVENT_CLOSE:
+                g_game_is_running = false;
+                break;
+
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.sym) {
+                case SDLK_t:
+                    two_players = !two_players;
+                case SDLK_UP:
+                    g_player_movement.y = 1.0f;
+                    break;
+
+                case SDLK_DOWN:
+                    g_player_movement.y = -1.0f;
+                    break;
+
+                case SDLK_ESCAPE:
+                    g_game_is_running = false;
+                    break;
+
+                default:
+                    break;
+                }
+            default:
+                break;
+            }
+        }
+
+       
 
         const Uint8* key_state = SDL_GetKeyboardState(NULL);
         if (key_state[SDL_SCANCODE_W])
@@ -302,6 +353,14 @@ void process_input() {
         else if (key_state[SDL_SCANCODE_S])
         {
             g_player_movement.y = -1.0f;
+        }
+        else if (key_state[SDL_SCANCODE_U]) 
+        {
+            g_computer_movement.y = 1.0f;
+        }
+        else if (key_state[SDL_SCANCODE_J]) 
+        {
+            g_computer_movement.y = -1.0f;
         }
 
     }
@@ -427,7 +486,7 @@ void render() {
 void update() {
 
     glClear(GL_COLOR_BUFFER_BIT);
-    
+
 
     float ticks = (float)SDL_GetTicks() / MILLISECONDS_IN_SECOND;
     float delta_time = ticks - g_previous_ticks;
@@ -449,7 +508,7 @@ void update() {
         g_ball_movement.x = -g_ball_movement.x;
         g_ball_position.x = g_computer_position.x - g_computer_width;
     }
-    
+
     // player movement logic
     if (g_player_position.y >= -g_player_max_y && g_player_position.y <= g_player_max_y) {
         g_player_position += g_player_movement * g_player_speed * (delta_time);
@@ -461,24 +520,39 @@ void update() {
         g_player_position.y = g_player_max_y;
     }
 
-    
+
+    // player 2 movement logic
+    if (two_players) {
+        if (g_computer_position.y >= -g_computer_max_y && g_computer_position.y <= g_computer_max_y) {
+            g_computer_position += g_computer_movement * g_player_speed * (delta_time);
+        }
+        else if (g_computer_position.y <= -g_computer_max_y) {
+            g_computer_position.y = -g_computer_max_y;
+        }
+        else if (g_computer_position.y >= g_computer_max_y) {
+            g_computer_position.y = g_computer_max_y;
+        }
+    }
     // computer movement logic
-    if ((g_ball_position.y > g_computer_position.y) && g_computer_position.y <= g_computer_max_y) {
-        g_computer_movement.y = g_ball_movement.y;
-        g_computer_position.y += g_computer_movement.y * g_computer_speed * delta_time;
+    else {
+        if ((g_ball_position.y > g_computer_position.y) && g_computer_position.y <= g_computer_max_y) {
+            g_computer_movement.y = g_ball_movement.y;
+            g_computer_position.y += g_computer_movement.y * g_computer_speed * delta_time;
+        }
+        if ((g_ball_position.y < g_computer_position.y) && g_computer_position.y >= -g_computer_max_y) {
+            g_computer_movement.y = g_ball_movement.y;
+            g_computer_position.y += g_computer_movement.y * g_computer_speed * delta_time;
+        }
+        if (g_computer_position.y < -g_computer_max_y) {
+            g_computer_position.y = -g_computer_max_y;
+            g_computer_movement.y = 0.0f;
+        }
+        if (g_computer_position.y > g_computer_max_y) {
+            g_computer_position.y = g_computer_max_y;
+            g_computer_movement.y = 0.0f;
+        }
     }
-    if ((g_ball_position.y < g_computer_position.y) && g_computer_position.y >= -g_computer_max_y) {
-        g_computer_movement.y = g_ball_movement.y;
-        g_computer_position.y += g_computer_movement.y * g_computer_speed * delta_time;
-    }
-    if (g_computer_position.y < -g_computer_max_y){
-        g_computer_position.y = -g_computer_max_y;
-        g_computer_movement.y = 0.0f;
-    }
-    if (g_computer_position.y > g_computer_max_y) {
-        g_computer_position.y = g_computer_max_y;
-        g_computer_movement.y = 0.0f;
-    }
+    
     
 
     // ball logic
@@ -511,6 +585,7 @@ void update() {
 
     g_paddle1_matrix = glm::translate(g_paddle1_matrix, g_player_position);
     g_paddle2_matrix = glm::translate(g_paddle2_matrix, g_computer_position);
+
     g_ball_matrix = glm::translate(g_ball_matrix, g_ball_position);
 
     g_ball_matrix = glm::scale(g_ball_matrix, g_ball_scale);
