@@ -1,3 +1,15 @@
+/**
+* Author: Jaden Thakur
+* Assignment: Pong Clone
+* Date due: 2023-10-21, 11:59pm
+* I pledge that I have completed this assignment without
+* collaborating with anyone else, in conformance with the
+* NYU School of Engineering Policies and Procedures on
+* Academic Misconduct.
+**/
+
+
+// #defines
 #define GL_SILENCE_DEPRECATION
 #define GL_GLEXT_PROTOTYPES 1
 #define LOG(argument) std::cout << argument << std::endl;
@@ -8,19 +20,102 @@
 #endif
 
 #define GL_GLEXT_PROTOTYPES 1
+
+// includes
 #include <SDL.h>
 #include <SDL_opengl.h>
-
 #include "glm/mat4x4.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "ShaderProgram.h"
-
 #include "stb_image.h"
+#include <vector>
 
-SDL_Window* displayWindow;
-bool gameIsRunning = true;
+
+// useful gloabal variables
+    const float MILLISECONDS_IN_SECOND = 1000.0f;
+    float g_previous_ticks = 0.0f;
+
+
+// necessary gloabal variables
+    bool g_game_is_running = true;
+    ShaderProgram g_program;
+
+
+// display window variables
+    SDL_Window* displayWindow;
+    const int WINDOW_HEIGHT = 600,
+              WINDOW_WIDTH  = 1000;
+
+// Background Color (purple)
+    const float BG_RED      = 0.192f,
+                BG_GREEN    = 0.039f,
+                BG_BLUE     = 0.192f,
+                BG_ALPHA    = 1.0f;
+
+// Text and Mid Line Color (green)
+    const float TXT_RED     = 0.639f,
+                TXT_GREEN   = 0.969f,
+                TXT_BLUE    = 0.710f,
+                TXT_ALPHA   = 1.0f;
+
+
+// Viewport
+    const int VIEWPORT_X      = 0,
+              VIEWPORT_Y      = 0,
+              VIEWPORT_WIDTH  = WINDOW_WIDTH,
+              VIEWPORT_HEIGHT = WINDOW_HEIGHT;
+
+    glm::mat4 g_view_matrix, // cam orientation
+              g_projection_matrix; //cam characteristics
+              
+
+
+
+// Textures
+    const char V_SHADER_PATH[] = "shaders/vertex_textured.glsl";
+    const char F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
+
+    const char ball_texture[] = "assets/pumpkin.png",
+               paddle1_texture[] = "assets/skeleton-LEFT.png",
+               paddle2_texture[] = "assets/skeleton-RIGHT.png";
+
+    GLuint ball_texture_id,
+           paddle1_texture_id,
+           paddle2_texture_id;
+
+
+    int NUMBER_OF_TEXTURES = 1;
+    const GLint LEVEL_OF_DETAIL = 0;
+    const GLint TEXTURE_BORDER = 0;
+
+
+// Paddle and Ball Matrices
+    glm::mat4 g_paddle1_matrix,
+              g_paddle2_matrix,
+              g_ball_matrix;
+// Paddle and Ball Vectors
+    glm::vec3 g_player_position      = glm::vec3(-4.0f, 0.0f, 0.0f),
+              g_computer_position    = glm::vec3(4.0f, 0.0f, 0.0f),
+              g_ball_position        = glm::vec3(0.0f, 0.0f, 0.0f),
+              g_player_movement     = glm::vec3(0.0f, 0.0f, 0.0f),
+              g_computer_movement   = glm::vec3(0.0f, 0.0f, 0.0f),
+              g_ball_movement       = glm::vec3(0.0f, 0.0f, 0.0f),
+              g_ball_scale          = glm::vec3(0.4f, 0.4f, 1.0f);
+
+// Player Variables
+    float g_player_speed = 100.0f;
+
+// Ball Variables
+    float g_ball_speed = 100.0f;
+
+// Computer Variables
+    float g_computer_speed = 100.0f;
+
+              
 
 GLuint load_texture(const char* filepath) {
+
+    // load image
     int width, height, number_of_components;
     unsigned char* image = stbi_load(filepath, &width, &height, &number_of_components, STBI_rgb_alpha);
 
@@ -29,33 +124,45 @@ GLuint load_texture(const char* filepath) {
         assert(false);
     }
 
-    GLuint textureID;
-    glGenTextures(NUMBER_OF_TEXTURES, &textureID);
 
-    glBindTexture(GL_TEXTURE_2D, textureID);
-
-
+    // Bind texture
+    GLuint texture_ID;
+    glGenTextures(NUMBER_OF_TEXTURES, &texture_ID);
+    glBindTexture(GL_TEXTURE_2D, texture_ID);
     glTexImage2D(
-        GL_TEXTURE_2D, LEVEL_OF_DETAIL, GL_RGBA,
+        GL_TEXTURE_2D, 
+        LEVEL_OF_DETAIL, 
+        GL_RGBA,
         width, height,
-        TEXTURE_BORDER, GL_RGBA, GL_UNSIGNED_BYTE,
+        TEXTURE_BORDER, 
+        GL_RGBA, 
+        GL_UNSIGNED_BYTE,
         image
     );
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
+    //sets texture filter parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    // release image from memory
     stbi_image_free(image);
-    return textureID;
+    return texture_ID;
+}
+
+void draw_object(glm::mat4& object_model_matrix, GLuint& object_texture_id) {
+    g_program.set_model_matrix(object_model_matrix);
+    glBindTexture(GL_TEXTURE_2D, object_texture_id);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
 
-
-
-
-
-int main(int argc, char* argv[]) {
+void initialize() {
     SDL_Init(SDL_INIT_VIDEO);
-    displayWindow = SDL_CreateWindow("Pong Clone", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_OPENGL);
+    displayWindow = SDL_CreateWindow("Pong Clone", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL);
     SDL_GLContext context = SDL_GL_CreateContext(displayWindow);
     SDL_GL_MakeCurrent(displayWindow, context);
 
@@ -63,20 +170,307 @@ int main(int argc, char* argv[]) {
     glewInit();
 #endif
 
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    // initialize viewport
+    glViewport(VIEWPORT_X, VIEWPORT_Y, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+    // load texture shaders
+    g_program.load(V_SHADER_PATH, F_SHADER_PATH);
 
+    // initialize values of view matrix and projection matrix as well as model matrix
+    g_view_matrix = glm::mat4(1.0f);
+    g_projection_matrix = glm::ortho(-5.0f, 5.0f, -3.75f, 3.75f, -1.0f, 1.0f);
+    
+    // set view and projection matrices
+    g_program.set_view_matrix(g_view_matrix);
+    g_program.set_projection_matrix(g_projection_matrix);
+    
+
+    // initialize object matrix values
+    g_paddle1_matrix = glm::mat4(1.0f);
+    g_paddle2_matrix = glm::mat4(1.0f);
+    g_ball_matrix = glm::mat4(1.0f);
+
+    // load all textures into texture IDs
+    paddle1_texture_id = load_texture(paddle1_texture);
+    paddle2_texture_id = load_texture(paddle2_texture);
+    ball_texture_id = load_texture(ball_texture);
+
+
+    // i forgot what these do, ask professor
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
+    // set up iniitial positons
+    g_paddle1_matrix = glm::translate(g_paddle1_matrix, g_player_position);
+    g_paddle2_matrix = glm::translate(g_paddle2_matrix, g_computer_position);
+    g_ball_matrix = glm::translate(g_ball_matrix, g_ball_position);
+
+    // sets ball size
+    g_ball_matrix = glm::scale(g_ball_matrix, g_ball_scale);
+        
+    // set the shader program
+    glUseProgram(g_program.get_program_id()); 
+    // set background
+    glClearColor(BG_RED, BG_GREEN, BG_BLUE, BG_ALPHA);
+
+    
+
+}
+
+
+void process_input() {
+
+    // stop player movement with no input
+    g_player_movement = glm::vec3(0.0f);
+
+    // create click event
     SDL_Event event;
-    while (gameIsRunning) {
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT || event.type == SDL_WINDOWEVENT_CLOSE) {
-                gameIsRunning = false;
+    
+    // create loop to detect events
+    while (SDL_PollEvent(&event)) {
+        switch (event.type) {
+            // quit
+        case SDL_QUIT:
+        case SDL_WINDOWEVENT_CLOSE:
+            g_game_is_running = false;
+            break;
+
+        case SDL_KEYDOWN:
+            switch (event.key.keysym.sym) {
+            case SDLK_w:
+                g_player_movement.y = 1.0f;
+                break;
+
+            case SDLK_s:
+                g_player_movement.y = -1.0f;
+                break;
+
+            case SDLK_ESCAPE:
+                g_game_is_running = false;
+                break;
+
+            default:
+                break;
             }
+        default:
+            break;
         }
 
-        glClear(GL_COLOR_BUFFER_BIT);
-        SDL_GL_SwapWindow(displayWindow);
+        const Uint8* key_state = SDL_GetKeyboardState(NULL);
+        if (key_state[SDL_SCANCODE_W])
+        {
+            g_player_movement.y = 1.0f;
+        }
+        else if (key_state[SDL_SCANCODE_S])
+        {
+            g_player_movement.y = -1.0f;
+        }
+
     }
 
+
+    
+
+    // stops player from cheating movement
+    if (glm::length(g_player_movement) > 1.0f)
+    {
+        g_player_movement = glm::normalize(g_player_movement);
+    }
+}
+
+
+const int FONTBANK_SIZE = 16;
+
+GLuint player_score_id; 
+GLuint computer_score_id;
+float screen_size = WINDOW_HEIGHT;
+float spacing = 2;
+
+void DrawText(ShaderProgram* program, GLuint font_texture_id, std::string text, float screen_size, float spacing, glm::vec3 position)
+{
+    // Scale the size of the fontbank in the UV-plane
+    // We will use this for spacing and positioning
+    float width = 1.0f / FONTBANK_SIZE;
+    float height = 1.0f / FONTBANK_SIZE;
+
+    // Instead of having a single pair of arrays, we'll have a series of pairs—one for each character
+    // Don't forget to include <vector>!
+    std::vector<float> vertices;
+    std::vector<float> texture_coordinates;
+
+    // For every character...
+    for (int i = 0; i < text.size(); i++) {
+        // 1. Get their index in the spritesheet, as well as their offset (i.e. their position
+        //    relative to the whole sentence)
+        int spritesheet_index = (int)text[i];  // ascii value of character
+        float offset = (screen_size + spacing) * i;
+
+        // 2. Using the spritesheet index, we can calculate our U- and V-coordinates
+        float u_coordinate = (float)(spritesheet_index % FONTBANK_SIZE) / FONTBANK_SIZE;
+        float v_coordinate = (float)(spritesheet_index / FONTBANK_SIZE) / FONTBANK_SIZE;
+
+        // 3. Inset the current pair in both vectors
+        vertices.insert(vertices.end(), {
+            offset + (-0.5f * screen_size), 0.5f * screen_size,
+            offset + (-0.5f * screen_size), -0.5f * screen_size,
+            offset + (0.5f * screen_size), 0.5f * screen_size,
+            offset + (0.5f * screen_size), -0.5f * screen_size,
+            offset + (0.5f * screen_size), 0.5f * screen_size,
+            offset + (-0.5f * screen_size), -0.5f * screen_size,
+            });
+
+        texture_coordinates.insert(texture_coordinates.end(), {
+            u_coordinate, v_coordinate,
+            u_coordinate, v_coordinate + height,
+            u_coordinate + width, v_coordinate,
+            u_coordinate + width, v_coordinate + height,
+            u_coordinate + width, v_coordinate,
+            u_coordinate, v_coordinate + height,
+            });
+    }
+
+    // 4. And render all of them using the pairs
+    glm::mat4 model_matrix = glm::mat4(1.0f);
+    model_matrix = glm::translate(model_matrix, position);
+
+    g_program.set_model_matrix(model_matrix);
+    glUseProgram(program->get_program_id());
+
+    glVertexAttribPointer(program->get_position_attribute(), 2, GL_FLOAT, false, 0, vertices.data());
+    glEnableVertexAttribArray(program->get_position_attribute());
+    glVertexAttribPointer(program->get_tex_coordinate_attribute(), 2, GL_FLOAT, false, 0, texture_coordinates.data());
+    glEnableVertexAttribArray(program->get_tex_coordinate_attribute());
+
+    glBindTexture(GL_TEXTURE_2D, font_texture_id);
+    glDrawArrays(GL_TRIANGLES, 0, (int)(text.size() * 6));
+
+    glDisableVertexAttribArray(program->get_position_attribute());
+    glDisableVertexAttribArray(program->get_tex_coordinate_attribute());
+}
+ 
+void render() {
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    
+    // Vertices (these always stay the same unless u want to enlarge the rectanlge but the coors should not move from the origin)
+    float vertices[] = {
+        -0.5f, -1.0f, 0.5f, -1.0f, 0.5f, 1.0f,  // triangle 1
+        -0.5f, -1.0f, 0.5f, 1.0f, -0.5f, 1.0f   // triangle 2
+    };
+    float vertices2[] = {
+        -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f,  // triangle 1
+        -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f   // triangle 2
+    };
+
+    // Textures
+    float texture_coordinates[] = {
+        0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,     // triangle 1
+        0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f,     // triangle 2
+    };
+
+
+    glVertexAttribPointer(g_program.get_position_attribute(), 2, GL_FLOAT, false, 0, vertices);
+    glEnableVertexAttribArray(g_program.get_position_attribute());
+
+    glVertexAttribPointer(g_program.get_tex_coordinate_attribute(), 2, GL_FLOAT, false, 0, texture_coordinates);
+    glEnableVertexAttribArray(g_program.get_tex_coordinate_attribute());
+
+    // Bind textures
+    g_program.set_model_matrix(g_paddle1_matrix);
+    glBindTexture(GL_TEXTURE_2D, paddle1_texture_id);
+    glDrawArrays(GL_TRIANGLES, 0, 6); 
+    g_program.set_model_matrix(g_paddle2_matrix);
+    glBindTexture(GL_TEXTURE_2D, paddle2_texture_id);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    glVertexAttribPointer(g_program.get_position_attribute(), 2, GL_FLOAT, false, 0, vertices2);
+    glEnableVertexAttribArray(g_program.get_position_attribute());
+
+    g_program.set_model_matrix(g_ball_matrix);
+    glBindTexture(GL_TEXTURE_2D, ball_texture_id);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    // We disable two attribute arrays now
+    glDisableVertexAttribArray(g_program.get_position_attribute());
+    glDisableVertexAttribArray(g_program.get_tex_coordinate_attribute());
+
+
+    SDL_GL_SwapWindow(displayWindow);
+}
+
+
+void update() {
+
+    glClear(GL_COLOR_BUFFER_BIT);
+    
+
+    float ticks = (float)SDL_GetTicks() / MILLISECONDS_IN_SECOND;
+    float delta_time = ticks - g_previous_ticks;
+    g_previous_ticks = ticks;
+    
+    // player movement logic
+    if (g_player_position.y >= -2.7f && g_player_position.y <= 2.7f) {
+        g_player_position += g_player_movement * g_player_speed * (delta_time);
+    }
+    else if (g_player_position.y <= -2.7f) {
+        g_player_position.y = -2.7f;
+    }
+    else if (g_player_position.y >= 2.7f) {
+        g_player_position.y = 2.7f;
+    }
+
+    // computer movement logic
+    g_computer_position.y = g_ball_position.y;
+
+    // ball logic
+    g_ball_movement.x = -1.0f;
+    g_ball_movement.y = 1.0f;
+
+    if (g_ball_position.y >= -2.7f && g_ball_position.y <= 2.7f && g_ball_position.x >= -2.7f && g_ball_position.x <= 2.7f) {
+        g_ball_position += g_ball_movement * g_ball_speed * (delta_time);
+    }
+    else if (g_ball_position.y <= -2.7f) {
+        g_ball_movement.y = -g_ball_movement.y;
+        
+    }
+    else if (g_player_position.y >= 2.7f) {
+        g_ball_movement.y = -g_ball_movement.y;
+        
+    }
+    else if (g_ball_position.x <= -2.7f) {
+        g_ball_movement.x = -g_ball_movement.x;
+        
+    }
+    else if (g_player_position.x >= 2.7f) {
+        g_ball_movement.x = -g_ball_movement.x;
+        
+    }
+   
+    g_paddle1_matrix = glm::mat4(1.0f);
+    g_paddle2_matrix = glm::mat4(1.0f);
+    g_ball_matrix = glm::mat4(1.0f);
+
+    g_paddle1_matrix = glm::translate(g_paddle1_matrix, g_player_position);
+    g_paddle2_matrix = glm::translate(g_paddle2_matrix, g_computer_position);
+    g_ball_matrix = glm::translate(g_ball_matrix, g_ball_position);
+    LOG("Player Y is:" << g_player_position.y << "Ball X: " << g_ball_position.x << " Ball Y: " << g_ball_position.y)
+}
+
+void shutdown() {
     SDL_Quit();
+}
+
+
+int main(int argc, char* argv[]) {
+    initialize();
+    
+    while (g_game_is_running) {
+        process_input();
+        update();
+        render();
+    }
+
+    shutdown();
+    
     return 0;
 }
