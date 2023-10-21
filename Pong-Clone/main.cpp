@@ -111,7 +111,7 @@
 // Gamer State Variables
     bool g_won;
     bool g_game_over = false;
-    bool two_players = false;
+    bool two_players = true;
 
 // Player Variables
     int g_player_score = 0;
@@ -255,6 +255,7 @@ void initialize() {
     // set background
     glClearColor(BG_RED, BG_GREEN, BG_BLUE, BG_ALPHA);
     
+    LOG("First to 3, Good Luck!");
 
 }
 
@@ -272,77 +273,38 @@ void process_input() {
     
     // create loop to detect events
     while (SDL_PollEvent(&event)) {
-        if (two_players) {
-            switch (event.type) {
-                // quit
-            case SDL_QUIT:
-            case SDL_WINDOWEVENT_CLOSE:
+        switch (event.type) {
+            // quit
+        case SDL_QUIT:
+        case SDL_WINDOWEVENT_CLOSE:
+            g_game_is_running = false;
+            break;
+
+        case SDL_KEYDOWN:
+            switch (event.key.keysym.sym) {
+            case SDLK_ESCAPE:
                 g_game_is_running = false;
                 break;
+            case SDLK_t:
+                two_players = !two_players;
+                break;
+            case SDLK_h:
+                g_computer_speed = 2;
+                break;
+            case SDLK_e:
+                g_computer_speed = 1;
+                break;
+            case SDLK_d:
+                g_player_speed = 1;
+                g_computer_speed = 2;
+                break;
 
-            case SDL_KEYDOWN:
-                switch (event.key.keysym.sym) {
-                case SDLK_t:
-                    two_players = !two_players;
-                case SDLK_w:
-                    g_player_movement.y = 1.0f;
-                    break;
-
-                case SDLK_s:
-                    g_player_movement.y = -1.0f;
-                    break;
-
-                case SDLK_ESCAPE:
-                    g_game_is_running = false;
-                    break;
-                    // second player
-                case SDLK_UP:
-                    g_computer_movement.y = 1.0f;
-                    break;
-
-                case SDLK_DOWN:
-                    g_computer_movement.y = -1.0f;
-                    break;
-
-                default:
-                    break;
-                }
             default:
                 break;
             }
+        default:
+            break;
         }
-        else {
-            switch (event.type) {
-                // quit
-            case SDL_QUIT:
-            case SDL_WINDOWEVENT_CLOSE:
-                g_game_is_running = false;
-                break;
-
-            case SDL_KEYDOWN:
-                switch (event.key.keysym.sym) {
-                case SDLK_t:
-                    two_players = !two_players;
-                case SDLK_UP:
-                    g_player_movement.y = 1.0f;
-                    break;
-
-                case SDLK_DOWN:
-                    g_player_movement.y = -1.0f;
-                    break;
-
-                case SDLK_ESCAPE:
-                    g_game_is_running = false;
-                    break;
-
-                default:
-                    break;
-                }
-            default:
-                break;
-            }
-        }
-
     }
 
     const Uint8* key_state = SDL_GetKeyboardState(NULL);
@@ -355,11 +317,11 @@ void process_input() {
         g_player_movement.y = -1.0f;
     }
 
-    if (key_state[SDL_SCANCODE_U])
+    if (key_state[SDL_SCANCODE_UP])
     {
         g_computer_movement.y = 1.0f;
     }
-    else if (key_state[SDL_SCANCODE_J])
+    else if (key_state[SDL_SCANCODE_DOWN])
     {
         g_computer_movement.y = -1.0f;
     }
@@ -565,13 +527,23 @@ void update() {
     }
     if (g_ball_position.x < -g_ball_max_x) {
         g_computer_score++;
-        LOG("Player: " << g_player_score << " Comp: " << g_computer_score);
+        if (two_players) {
+            LOG("Player 1: " << g_player_score << " Player 2: " << g_computer_score);
+        }
+        else {
+            LOG("Player: " << g_player_score << " Computer: " << g_computer_score);
+        }
         g_ball_movement.x = -g_ball_movement.x;
         g_ball_position.x = 0;
     }
     if (g_ball_position.x > g_ball_max_x) {
         g_player_score++;
-        LOG("Player: " << g_player_score << " Comp: " << g_computer_score);
+        if (two_players) {
+            LOG("Player 1: " << g_player_score << " Player 2: " << g_computer_score);
+        }
+        else {
+            LOG("Player: " << g_player_score << " Computer: " << g_computer_score);
+        }
         g_ball_movement.x = -g_ball_movement.x;
         g_ball_position.x = 0;
     }
@@ -579,6 +551,19 @@ void update() {
     // game over stuff
     if (g_player_score == 3 || g_computer_score == 3) {
         g_game_over = true;
+        if (g_player_score == 3 && !two_players) {
+            LOG("You Won!!");
+        }
+        else if (g_computer_score == 3 && two_players) {
+            LOG("Player 2 Wins!!!");
+        }
+        else if (g_player_score == 3 && two_players) {
+            LOG("Player 1 Wins!!!");
+        }
+        else {
+            LOG("You Lose! Try Again!");
+        }
+
     }
     if (g_game_over) {
         g_game_is_running = false;
