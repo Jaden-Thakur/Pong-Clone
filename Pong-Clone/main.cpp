@@ -115,14 +115,14 @@
 
 // Player Variables
     int g_player_score = 0;
-    float g_player_speed = 100.0f,
+    float g_player_speed = 2.0f,
           g_player_height = g_player_scale.y,
           g_player_width = g_player_scale.x,
           g_player_max_y,
           g_player_max_x;
 
 // Ball Variables
-    float g_ball_speed = 1.0f,
+    float g_ball_speed = 2.0f,
           g_ball_height = g_ball_scale.y,
           g_ball_width = g_ball_scale.x,
           g_ball_max_y,
@@ -343,29 +343,26 @@ void process_input() {
             }
         }
 
-       
-
-        const Uint8* key_state = SDL_GetKeyboardState(NULL);
-        if (key_state[SDL_SCANCODE_W])
-        {
-            g_player_movement.y = 1.0f;
-        }
-        else if (key_state[SDL_SCANCODE_S])
-        {
-            g_player_movement.y = -1.0f;
-        }
-        else if (key_state[SDL_SCANCODE_U]) 
-        {
-            g_computer_movement.y = 1.0f;
-        }
-        else if (key_state[SDL_SCANCODE_J]) 
-        {
-            g_computer_movement.y = -1.0f;
-        }
-
     }
 
+    const Uint8* key_state = SDL_GetKeyboardState(NULL);
+    if (key_state[SDL_SCANCODE_W])
+    {
+        g_player_movement.y = 1.0f;
+    }
+    else if (key_state[SDL_SCANCODE_S])
+    {
+        g_player_movement.y = -1.0f;
+    }
 
+    if (key_state[SDL_SCANCODE_U])
+    {
+        g_computer_movement.y = 1.0f;
+    }
+    else if (key_state[SDL_SCANCODE_J])
+    {
+        g_computer_movement.y = -1.0f;
+    }
     
 
 }
@@ -578,23 +575,33 @@ void update() {
         g_ball_movement.x = -g_ball_movement.x;
         g_ball_position.x = 0;
     }
+
+    // game over stuff
+    if (g_player_score == 3 || g_computer_score == 3) {
+        g_game_over = true;
+    }
+    if (g_game_over) {
+        g_game_is_running = false;
+        return;
+    }
    
+
+    //resets all object matrices
     g_paddle1_matrix = glm::mat4(1.0f);
     g_paddle2_matrix = glm::mat4(1.0f);
     g_ball_matrix = glm::mat4(1.0f);
 
+    //set object positions
     g_paddle1_matrix = glm::translate(g_paddle1_matrix, g_player_position);
     g_paddle2_matrix = glm::translate(g_paddle2_matrix, g_computer_position);
-
     g_ball_matrix = glm::translate(g_ball_matrix, g_ball_position);
 
+    //set scaling
     g_ball_matrix = glm::scale(g_ball_matrix, g_ball_scale);
     g_paddle1_matrix = glm::scale(g_paddle1_matrix, g_player_scale);
     g_paddle2_matrix = glm::scale(g_paddle2_matrix, g_computer_scale);
 
-    if (g_game_over) {
-
-    }
+    
 }
 
 void shutdown() {
