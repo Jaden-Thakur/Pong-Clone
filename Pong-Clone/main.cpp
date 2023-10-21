@@ -240,6 +240,8 @@ void initialize() {
     g_ball_max_x = rel_width - (g_ball_width / 2);
     g_player_max_y = rel_height - (g_player_height / 2);
     g_player_max_x = rel_width - (g_player_width / 2);
+    g_computer_max_y = rel_height - (g_computer_height / 2);
+    g_computer_max_x = rel_width - (g_computer_width / 2);
 
     // sets ball initial direction
     g_ball_movement.x = -1.0f;
@@ -307,11 +309,6 @@ void process_input() {
 
     
 
-    // stops player from cheating movement
-    if (glm::length(g_player_movement) > 1.0f)
-    {
-        g_player_movement = glm::normalize(g_player_movement);
-    }
 }
 
 
@@ -435,6 +432,23 @@ void update() {
     float ticks = (float)SDL_GetTicks() / MILLISECONDS_IN_SECOND;
     float delta_time = ticks - g_previous_ticks;
     g_previous_ticks = ticks;
+
+
+    //collision
+    float x_distance_player = fabs(g_ball_position.x - g_player_position.x) - ((g_ball_width + g_player_width) / 2);
+    float y_distance_player = fabs(g_ball_position.y - g_player_position.y) - ((g_ball_height + g_player_height) / 2);
+    float x_distance_computer = fabs(g_ball_position.x - g_computer_position.x) - ((g_ball_width + g_computer_width) / 2);
+    float y_distance_computer = fabs(g_ball_position.y - g_computer_position.y) - ((g_ball_height + g_computer_height) / 2);
+
+    if (x_distance_player <= 0.0f && y_distance_player <= 0.0f) {
+        g_ball_movement.x = -g_ball_movement.x;
+        g_ball_position.x = g_player_position.x + g_player_width;
+    }
+
+    if (x_distance_computer <= 0.0f && y_distance_computer <= 0.0f) {
+        g_ball_movement.x = -g_ball_movement.x;
+        g_ball_position.x = g_computer_position.x - g_computer_width;
+    }
     
     // player movement logic
     if (g_player_position.y >= -g_player_max_y && g_player_position.y <= g_player_max_y) {
@@ -471,9 +485,11 @@ void update() {
     g_ball_position += g_ball_movement * g_ball_speed * (delta_time);
 
     if (g_ball_position.y < -g_ball_max_y) {
+        g_ball_position.y = -g_ball_max_y;
         g_ball_movement.y = -g_ball_movement.y; 
     }
     if (g_ball_position.y > g_ball_max_y) {
+        g_ball_position.y = g_ball_max_y;
         g_ball_movement.y = -g_ball_movement.y;   
     }
     if (g_ball_position.x < -g_ball_max_x) {
