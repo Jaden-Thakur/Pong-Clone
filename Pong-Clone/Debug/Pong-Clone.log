@@ -1,1 +1,3 @@
-﻿  Pong-Clone.vcxproj -> C:\Users\drago\source\repos\Pong-Clone\Pong-Clone\Debug\Pong-Clone.exe
+﻿  main.cpp
+C:\Users\drago\source\repos\Pong-Clone\Pong-Clone\main.cpp(252,23): warning C4018: '<': signed/unsigned mismatch
+  Pong-Clone.vcxproj -> C:\Users\drago\source\repos\Pong-Clone\Pong-Clone\Debug\Pong-Clone.exe

@@ -39,6 +39,7 @@
 // necessary gloabal variables
     bool g_game_is_running = true;
     ShaderProgram g_program;
+    const int FONTBANK_SIZE = 16;
 
 
 // display window variables
@@ -81,13 +82,32 @@
                paddle1_texture[] = "assets/skeleton-LEFT.png",
                paddle2_texture[] = "assets/skeleton-RIGHT.png",
                midline_texture[] = "assets/Dotted-Line-edit.png",
-               font_texture[] = "assets/font.png";
+               font_texture[] = "assets/font.png",
+               title_texture[] = "assets/Title.png",
+               go_texture[] = "assets/go.png",
+               p1_c_texture[] = "assets/P1_controls.png",
+               p2_c_texture[] = "assets/P2_controls.png",
+               d_c_texture[] = "assets/Difficulty.png",
+               t_c_texture[] = "assets/T.png",
+               play_texture[] = "assets/Play.png",
+               go_options_texture[] = "assets/end_game_options.png",
+               htp_texture[] = "assets/Controls.png";
 
     GLuint  ball_texture_id,
             paddle1_texture_id,
             paddle2_texture_id,
             midline_texture_id,
-            font_texture_id;
+            font_texture_id,
+            title_texture_id,
+            p1_con_texture_id,
+            p2_con_texture_id,
+            diff_texture_id,
+            how_texture_id,
+            t_texture_id,
+            play_texture_id,
+            go_texture_id,
+            go_opts_texture_id;
+
 
 
     const GLint NUMBER_OF_TEXTURES = 1,
@@ -113,12 +133,33 @@
 //UI elements
     glm::mat4   g_midline_matrix,
                 g_left_score_matrix,
-                g_right_score_matrix;
+                g_right_score_matrix,
+                ui_element1_matrix,
+                ui_element2_matrix,
+                ui_element3_matrix,
+                ui_element4_matrix,
+                ui_element5_matrix,
+                ui_element6_matrix,
+                ui_element7_matrix;
     glm::vec3   g_midline_position      = glm::vec3(0.0f, 0.0f, 0.0f),
                 g_left_score_position   = glm::vec3(-2.0f, 2.0f, 0.0f),
                 g_right_score_position  = glm::vec3(2.0f, 2.0f, 0.0f),
                 g_score_scale           = glm::vec3(1.0f, 1.0f, 1.0f),
-                g_midline_scale         = glm::vec3(0.25f, 8.0f, 1.0f);
+                g_midline_scale         = glm::vec3(0.25f, 8.0f, 1.0f),
+                ui_element1_position    = glm::vec3(0.0f, 2.8f, 0.0f), //title/GO
+                ui_element1_scale       = glm::vec3(3.0f, 1.0f, 1.0f),
+                ui_element2_position    = glm::vec3(-2.0f, 0.0f, 0.0f), // p1
+                ui_element2_scale       = glm::vec3(1.0f, 1.0f, 1.0f),
+                ui_element3_position    = glm::vec3(2.0f, 0.0f, 0.0f), // p2
+                ui_element3_scale       = glm::vec3(1.5f, 1.0f, 1.0f),
+                ui_element4_position    = glm::vec3(0.0f, 0.0f, 0.0f), // diff / winner message
+                ui_element4_scale       = glm::vec3(1.0f, 1.0f, 1.0f),
+                ui_element5_position    = glm::vec3(0.0f, 1.0f, 0.0f), // htp
+                ui_element5_scale       = glm::vec3(1.5f, 1.0f, 1.0f),
+                ui_element6_position    = glm::vec3(0.0f, -0.8f, 0.0f), // t
+                ui_element6_scale       = glm::vec3(1.5f, 0.3f, 1.0f),
+                ui_element7_position    = glm::vec3(0.0f, -2.0f, 0.0f), // play/ GO_options
+                ui_element7_scale       = glm::vec3(2.0f, 1.0f, 1.0f);
 
 
 
@@ -132,7 +173,7 @@
     bool end_screen = false;
 
 // Player Variables
-    int g_player_score = 2;
+    int g_player_score = 0;
     float g_player_speed = 2.0f,
           g_player_height = g_player_scale.y,
           g_player_width = g_player_scale.x,
@@ -155,7 +196,6 @@
           g_computer_max_x; 
 
               
-
 GLuint load_texture(const char* filepath) {
 
     // load image
@@ -195,8 +235,6 @@ GLuint load_texture(const char* filepath) {
     stbi_image_free(image);
     return texture_ID;
 }
-
-const int FONTBANK_SIZE = 16;
 
 void DrawText(ShaderProgram* program, GLuint font_texture_id, std::string text, float screen_size, float spacing, glm::vec3 position)
 {
@@ -260,6 +298,8 @@ void DrawText(ShaderProgram* program, GLuint font_texture_id, std::string text, 
     glDisableVertexAttribArray(program->get_tex_coordinate_attribute());
 }
 
+
+
 void initialize() {
     SDL_Init(SDL_INIT_VIDEO);
     displayWindow = SDL_CreateWindow("Pong Clone", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL);
@@ -293,6 +333,13 @@ void initialize() {
     g_midline_matrix = glm::mat4(1.0f);
     g_left_score_matrix = glm::mat4(1.0f);
     g_right_score_matrix = glm::mat4(1.0f);
+    ui_element1_matrix = glm::mat4(1.0f);
+    ui_element2_matrix = glm::mat4(1.0f);
+    ui_element3_matrix = glm::mat4(1.0f);
+    ui_element4_matrix = glm::mat4(1.0f);
+    ui_element5_matrix = glm::mat4(1.0f);
+    ui_element6_matrix = glm::mat4(1.0f);
+    ui_element7_matrix = glm::mat4(1.0f);
 
     // load all textures into texture IDs
     paddle1_texture_id = load_texture(paddle1_texture);
@@ -300,9 +347,17 @@ void initialize() {
     ball_texture_id = load_texture(ball_texture);
     midline_texture_id = load_texture(midline_texture);
     font_texture_id = load_texture(font_texture);
+    title_texture_id = load_texture(title_texture);
+    p1_con_texture_id = load_texture(p1_c_texture);
+    p2_con_texture_id = load_texture(p2_c_texture);
+    diff_texture_id = load_texture(d_c_texture);
+    how_texture_id = load_texture(htp_texture);
+    t_texture_id = load_texture(t_c_texture);
+    play_texture_id = load_texture(play_texture);
+    go_texture_id = load_texture(go_texture);
+    go_opts_texture_id = load_texture(go_options_texture);
 
 
-    // i forgot what these do, ask professor
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -311,7 +366,23 @@ void initialize() {
     g_paddle1_matrix = glm::translate(g_paddle1_matrix, g_player_position);
     g_paddle2_matrix = glm::translate(g_paddle2_matrix, g_computer_position);
     g_ball_matrix = glm::translate(g_ball_matrix, g_ball_position);
+    ui_element1_matrix = glm::translate(ui_element1_matrix, ui_element1_position);
+    ui_element2_matrix = glm::translate(ui_element2_matrix, ui_element2_position);
+    ui_element3_matrix = glm::translate(ui_element3_matrix, ui_element3_position);
+    ui_element4_matrix = glm::translate(ui_element4_matrix, ui_element4_position);
+    ui_element5_matrix = glm::translate(ui_element5_matrix, ui_element5_position);
+    ui_element6_matrix = glm::translate(ui_element6_matrix, ui_element6_position);
+    ui_element7_matrix = glm::translate(ui_element7_matrix, ui_element7_position);
 
+
+    // Scales UI elements
+    ui_element1_matrix = glm::scale(ui_element1_matrix, ui_element1_scale);
+    ui_element2_matrix = glm::scale(ui_element2_matrix, ui_element2_scale);
+    ui_element3_matrix = glm::scale(ui_element3_matrix, ui_element3_scale);
+    ui_element4_matrix = glm::scale(ui_element4_matrix, ui_element4_scale);
+    ui_element5_matrix = glm::scale(ui_element5_matrix, ui_element5_scale);
+    ui_element6_matrix = glm::scale(ui_element6_matrix, ui_element6_scale);
+    ui_element7_matrix = glm::scale(ui_element7_matrix, ui_element7_scale);
 
 
     // sets ball size
@@ -342,7 +413,6 @@ void initialize() {
     LOG("First to 3, Good Luck!");
 
 }
-
 
 void process_input() {
 
@@ -468,10 +538,55 @@ void process_input() {
 void render() {
     glClear(GL_COLOR_BUFFER_BIT);
 
+    // Vertices (these always stay the same unless u want to enlarge the rectanlge but the coors should not move from the origin)
+    float vertices[] = {
+        -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f,  // triangle 1
+        -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f   // triangle 2
+    };
+
+    // Textures
+    float texture_coordinates[] = {
+        0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,     // triangle 1
+        0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f,     // triangle 2
+    };
 
     std::string test = "test";
     if (intro) {
-        DrawText(&g_program, font_texture_id, test, 1.0f, 1.0f, g_left_score_position);
+        glVertexAttribPointer(g_program.get_position_attribute(), 2, GL_FLOAT, false, 0, vertices);
+        glEnableVertexAttribArray(g_program.get_position_attribute());
+
+        glVertexAttribPointer(g_program.get_tex_coordinate_attribute(), 2, GL_FLOAT, false, 0, texture_coordinates);
+        glEnableVertexAttribArray(g_program.get_tex_coordinate_attribute());
+
+        // Title
+        g_program.set_model_matrix(ui_element1_matrix);
+        glBindTexture(GL_TEXTURE_2D, title_texture_id);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // P1 Controls
+        g_program.set_model_matrix(ui_element2_matrix);
+        glBindTexture(GL_TEXTURE_2D, p1_con_texture_id);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // P2 Controls
+        g_program.set_model_matrix(ui_element3_matrix);
+        glBindTexture(GL_TEXTURE_2D, p2_con_texture_id);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // Difficulty
+        g_program.set_model_matrix(ui_element4_matrix);
+        glBindTexture(GL_TEXTURE_2D, diff_texture_id);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // How To Play:
+        g_program.set_model_matrix(ui_element5_matrix);
+        glBindTexture(GL_TEXTURE_2D, how_texture_id);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // Multiplayer
+        g_program.set_model_matrix(ui_element6_matrix);
+        glBindTexture(GL_TEXTURE_2D, t_texture_id);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // Play
+        g_program.set_model_matrix(ui_element7_matrix);
+        glBindTexture(GL_TEXTURE_2D, play_texture_id);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
     }
     else if (start) {
 
@@ -480,18 +595,6 @@ void render() {
 
         DrawText(&g_program, font_texture_id, l_score, 1.0f, 1.0f, g_left_score_position);
         DrawText(&g_program, font_texture_id, r_score, 1.0f, 1.0f, g_right_score_position);
-
-        // Vertices (these always stay the same unless u want to enlarge the rectanlge but the coors should not move from the origin)
-        float vertices[] = {
-            -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f,  // triangle 1
-            -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f   // triangle 2
-        };
-
-        // Textures
-        float texture_coordinates[] = {
-            0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,     // triangle 1
-            0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f,     // triangle 2
-        };
 
 
         glVertexAttribPointer(g_program.get_position_attribute(), 2, GL_FLOAT, false, 0, vertices);
@@ -523,17 +626,42 @@ void render() {
 
     }
     else if (end_screen) {
+        
+        glVertexAttribPointer(g_program.get_position_attribute(), 2, GL_FLOAT, false, 0, vertices);
+        glEnableVertexAttribArray(g_program.get_position_attribute());
+
+        glVertexAttribPointer(g_program.get_tex_coordinate_attribute(), 2, GL_FLOAT, false, 0, texture_coordinates);
+        glEnableVertexAttribArray(g_program.get_tex_coordinate_attribute());
+
+        // GO
+        g_program.set_model_matrix(ui_element1_matrix);
+        glBindTexture(GL_TEXTURE_2D, go_texture_id);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // Options
+
+        g_program.set_model_matrix(ui_element7_matrix);
+        glBindTexture(GL_TEXTURE_2D, go_opts_texture_id);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
+
+        ui_element4_position.y = 0.0;
         if (g_player_score == 3 && !two_players) {
-            DrawText(&g_program, font_texture_id, "You Won!!", 0.5f, 0.000001f, g_left_score_position);
+            ui_element4_position.x = -2.5;
+            
+            DrawText(&g_program, font_texture_id, "You Won!!", 0.5f, 0.000001f, ui_element4_position);
         }
         else if (g_computer_score == 3 && two_players) {
-            DrawText(&g_program, font_texture_id, "Player 2 Wins!!!", 0.5f, 0.000001f, g_left_score_position);
+            ui_element4_position.x = -4;
+            DrawText(&g_program, font_texture_id, "Player 2 Wins!!!", 0.5f, 0.000001f, ui_element4_position);
         }
         else if (g_player_score == 3 && two_players) {
-            DrawText(&g_program, font_texture_id, "Player 1 Wins!!!", 0.5f, 0.000001f, g_left_score_position);
+            ui_element4_position.x = -4;
+            DrawText(&g_program, font_texture_id, "Player 1 Wins!!!", 0.5f, 0.000001f, ui_element4_position);
         }
         else {
-            DrawText(&g_program, font_texture_id, "You Lose! Try Again!", 0.5f, 0.000001f, g_left_score_position);
+            ui_element4_position.x = -4.5;
+            DrawText(&g_program, font_texture_id, "You Lose! Try Again!", 0.5f, 0.000001f, ui_element4_position);
         }
     }
    
@@ -544,7 +672,6 @@ void render() {
 
     SDL_GL_SwapWindow(displayWindow);
 }
-
 
 void update() {
 
@@ -686,7 +813,6 @@ void update() {
 void shutdown() {
     SDL_Quit();
 }
-
 
 int main(int argc, char* argv[]) {
     initialize();
