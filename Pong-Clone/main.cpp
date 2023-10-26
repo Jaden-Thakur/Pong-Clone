@@ -389,7 +389,7 @@ void initialize() {
     g_ball_matrix = glm::scale(g_ball_matrix, g_ball_scale);
     g_paddle1_matrix = glm::scale(g_paddle1_matrix, g_player_scale);
     g_paddle2_matrix = glm::scale(g_paddle2_matrix, g_computer_scale);
-    g_midline_matrix = glm:: scale(g_midline_matrix, g_midline_scale);
+    g_midline_matrix = glm::scale(g_midline_matrix, g_midline_scale);
 
     g_ball_max_y = rel_height - (g_ball_height / 2);
     g_ball_max_x = rel_width - (g_ball_width / 2);
